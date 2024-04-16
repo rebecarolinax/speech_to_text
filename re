@@ -9,10 +9,11 @@ namespace TranslationAPI.Controllers
     [ApiController]
     public class TranslationController : ControllerBase
     {
-        private readonly HttpClient _httpClient;
+        private readonly HttpClient _httpClient; // Instância do HttpClient para fazer solicitações HTTP.
 
         public TranslationController()
         {
+            // Configuração do HttpClient com a chave de assinatura para autenticação.
             _httpClient = new HttpClient();
             _httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "SUA_CHAVE_DE_ASSINATURA_AQUI");
         }
@@ -22,19 +23,18 @@ namespace TranslationAPI.Controllers
         {
             try
             {
-                var requestBody = $"{{\"text\":\"{text}\"}}";
-                var content = new StringContent(requestBody);
-                content.Headers.ContentType.MediaType = "application/json";
-
-                var response = await _httpClient.PostAsync("https://westus.tts.speech.microsoft.com/cognitiveservices/v1", content);
-                response.EnsureSuccessStatusCode();
+                // Faz uma solicitação POST para a API de conversão de texto para fala da Azure.
+                var response = await _httpClient.PostAsync("https://westus.tts.speech.microsoft.com/cognitiveservices/v1",
+                    new StringContent($"{{\"text\":\"{text}\"}}"));
                 
-                var audioStream = await response.Content.ReadAsStreamAsync();
+                response.EnsureSuccessStatusCode(); // Verifica se a solicitação foi bem-sucedida.
 
-                return File(audioStream, "audio/wav");
+                // Retorna o áudio da resposta como um arquivo WAV.
+                return File(await response.Content.ReadAsStreamAsync(), "audio/wav");
             }
             catch (Exception ex)
             {
+                // Retorna um erro em caso de falha na solicitação.
                 return BadRequest($"Error: {ex.Message}");
             }
         }
@@ -44,18 +44,18 @@ namespace TranslationAPI.Controllers
         {
             try
             {
-                var content = new ByteArrayContent(audio);
-                content.Headers.TryAddWithoutValidation("Content-Type", "audio/wav");
-
+                // Faz uma solicitação POST para a API de conversão de fala para texto da Azure.
+                var content = new ByteArrayContent(audio) { Headers = { { "Content-Type", "audio/wav" } } };
                 var response = await _httpClient.PostAsync("https://westus.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1", content);
-                response.EnsureSuccessStatusCode();
+                
+                response.EnsureSuccessStatusCode(); // Verifica se a solicitação foi bem-sucedida.
 
-                var text = await response.Content.ReadAsStringAsync();
-
-                return Ok(text);
+                // Retorna o texto da resposta.
+                return Ok(await response.Content.ReadAsStringAsync());
             }
             catch (Exception ex)
             {
+                // Retorna um erro em caso de falha na solicitação.
                 return BadRequest($"Error: {ex.Message}");
             }
         }
